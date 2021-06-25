@@ -15,9 +15,9 @@ import Svg.Attributes as SA
 
 
 {-| Configure the hovercard.
-\* maxWidth: maximum width of the hovercard
-\* maxHeight: maximum height of the hovercard
-\* borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
+- maxWidth: maximum width of the hovercard
+- maxHeight: maximum height of the hovercard
+- borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
 -}
 type alias Config =
     { maxWidth : Int

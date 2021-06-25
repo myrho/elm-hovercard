@@ -30,4 +30,4 @@ hovercard
 
 ## Complete example
 
-See `example/Example.elm`!
+Live on [Ellie](https://ellie-app.com/dyzNJcZv2D6a1)!
