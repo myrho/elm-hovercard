@@ -98,9 +98,13 @@ main =
                                             , maxHeight = 100
                                             , borderColor = Color.black
                                             , backgroundColor = Color.lightBlue
-                                            , borderWidth = 3
+                                            , borderWidth = 2
                                             }
+                                            -- Browser.Dom.Element representing
+                                            -- viewport and position of the element
                                             element
+                                            [ style "box-shadow" "5px 5px 5px 0px rgba(0,0,0,0.25)"
+                                            ]
                                             [ div
                                                 []
                                                 [ text "Lorem ipsum dolor sit amet"

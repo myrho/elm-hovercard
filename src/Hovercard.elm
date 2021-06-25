@@ -1,5 +1,11 @@
 module Hovercard exposing (Config, hovercard)
 
+{-| This module makes rendering hovercards like [Wikipedia's](https://anandchowdhary.github.io/hovercard/) easy.
+
+@docs Config, hovercard
+
+-}
+
 import Browser.Dom as Dom
 import Color exposing (Color)
 import Html exposing (Html)
@@ -8,7 +14,10 @@ import Svg exposing (Svg)
 import Svg.Attributes as SA
 
 
-{-| Configure the hovercard
+{-| Configure the hovercard.
+\* maxWidth: maximum width of the hovercard
+\* maxHeight: maximum height of the hovercard
+\* borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
 -}
 type alias Config =
     { maxWidth : Int
@@ -20,9 +29,35 @@ type alias Config =
 
 
 {-| Render a hovercard above or below the given [Browser.Dom.Element](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Dom#Element).
+
+Call this function at the root of your HTML so the hovercard is positioned correctly.
+
+Example:
+
+    hovercard
+        -- configuration
+        { maxWidth = 100
+        , maxHeight = 100
+        , borderColor = Color.black
+        , backgroundColor = Color.lightBlue
+        , borderWidth = 2
+        }
+        -- Browser.Dom.Element representing
+        -- viewport and position of the element
+        element
+        -- additional styles for the hovercard, eg. a shadow
+        [ style "box-shadow" "5px 5px 5px 0px rgba(0,0,0,0.25)"
+        ]
+        -- the content of the hovercard
+        [ div
+            []
+            [ text "Lorem ipsum dolor sit amet"
+            ]
+        ]
+
 -}
-hovercard : Config -> Dom.Element -> List (Html msg) -> Html msg
-hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } element hoverContent =
+hovercard : Config -> Dom.Element -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } element attr hoverContent =
     let
         el =
             element.element
@@ -130,20 +165,22 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
             , HA.style anchorV "100%"
             ]
             ([ Html.div
-                [ HA.style "overflow" "auto"
-                , HA.style "position" "relative"
-                , HA.style anchorV <| String.fromFloat (triangleLength / 2) ++ "px"
-                , HA.style "z-index" "1"
-                , HA.style anchorH <| String.fromFloat offset ++ "px"
-                , Color.toCssString backgroundColor
+                ([ HA.style "overflow" "auto"
+                 , HA.style "position" "relative"
+                 , HA.style anchorV <| String.fromFloat (triangleLength / 2) ++ "px"
+                 , HA.style "z-index" "1"
+                 , HA.style anchorH <| String.fromFloat offset ++ "px"
+                 , Color.toCssString backgroundColor
                     |> HA.style "background-color"
-                , Color.toCssString borderColor
+                 , Color.toCssString borderColor
                     |> HA.style "border-color"
-                , String.fromFloat borderWidth
+                 , String.fromFloat borderWidth
                     ++ "px"
                     |> HA.style "border-width"
-                , HA.style "border-style" "solid"
-                ]
+                 , HA.style "border-style" "solid"
+                 ]
+                    ++ attr
+                )
                 hoverContent
              , triangle
                 { length = triangleLength
