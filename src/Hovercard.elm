@@ -18,12 +18,14 @@ import Svg.Attributes as SA
 
   - maxWidth: maximum width of the hovercard
   - maxHeight: maximum height of the hovercard
+  - tickLength: length of the tick
   - borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
 
 -}
 type alias Config =
     { maxWidth : Int
     , maxHeight : Int
+    , tickLength : Float
     , borderColor : Color
     , backgroundColor : Color
     , borderWidth : Float
@@ -59,7 +61,7 @@ Example:
 
 -}
 hovercard : Config -> Dom.Element -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } element attr hoverContent =
+hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borderWidth } element attr hoverContent =
     let
         el =
             element.element
@@ -69,93 +71,68 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
 
         -- position of el relative to vp
         x =
-            el.x - vp.x
+            el.x
+                - vp.x
+                |> max 0
 
         y =
-            el.y - vp.y
+            el.y
+                - vp.y
+                |> max 0
+
+        w =
+            min el.width vp.width
+
+        h =
+            min el.height vp.height
 
         diffBelow =
             vp.height
-                - toFloat maxHeight
                 - y
-                - el.height
+                - h
 
         diffAbove =
             y
-                - toFloat maxHeight
 
         diffRight =
             vp.width - x
 
-        diffLeft =
-            x + el.width
-
-        ( h, placeAbove ) =
-            if diffAbove < 0 && diffBelow < 0 then
-                if diffAbove < diffBelow then
-                    ( toFloat maxHeight + diffBelow, False )
-
-                else
-                    ( toFloat maxHeight + diffAbove, True )
-
-            else
-                ( toFloat maxHeight, diffAbove >= 0 )
-
-        ( w, placeLeft ) =
-            if diffRight < toFloat maxWidth then
-                ( min vp.width <| toFloat maxWidth
-                , True
-                )
-
-            else
-                ( toFloat maxWidth, False )
-
-        offset =
-            if placeLeft then
-                -(vp.width - x - el.width)
-
-            else if diffLeft < x then
-                -x
-
-            else if el.width > toFloat maxWidth then
-                x + el.width / 2 - triangleLength * 2
-
-            else
-                0
+        baselineBottom =
+            diffAbove
+                < toFloat maxHeight
+                && not (diffBelow < toFloat maxHeight)
 
         anchorH =
-            if placeLeft then
+            if diffRight < toFloat maxWidth then
                 "right"
 
             else
                 "left"
 
-        anchorV =
-            if placeAbove then
-                "bottom"
+        ( anchorV, arrange ) =
+            if diffAbove < toFloat maxHeight then
+                ( "top", List.reverse )
 
             else
-                "top"
+                ( "bottom", identity )
 
-        arrange =
-            if placeAbove then
-                identity
+        mw =
+            toFloat maxWidth
+                |> min vp.width
 
-            else
-                List.reverse
-
-        triangleLength =
-            16
+        mh =
+            toFloat maxHeight
+                |> min vp.height
     in
     Html.div
         [ HA.style "position" "absolute"
         , HA.style "top" <|
             (String.fromFloat <|
-                if placeAbove then
-                    el.y
+                if baselineBottom then
+                    el.y + el.height
 
                 else
-                    el.y + el.height
+                    el.y
             )
                 ++ "px"
         , HA.style "left" <| String.fromFloat el.x ++ "px"
@@ -163,8 +140,8 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
         ]
         [ Html.div
             [ HA.style "position" "absolute"
-            , HA.style "maxWidth" <| String.fromFloat w ++ "px"
-            , HA.style "max-height" <| String.fromFloat h ++ "px"
+            , HA.style "max-width" <| String.fromFloat mw ++ "px"
+            , HA.style "max-height" <| String.fromFloat mh ++ "px"
             , HA.style anchorH "0"
             , HA.style "z-index" "100"
             , HA.style anchorV "100%"
@@ -172,9 +149,8 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
             ([ Html.div
                 ([ HA.style "overflow" "auto"
                  , HA.style "position" "relative"
-                 , HA.style anchorV <| String.fromFloat (triangleLength / 2) ++ "px"
+                 , HA.style anchorV <| String.fromFloat (tickLength / 2) ++ "px"
                  , HA.style "z-index" "1"
-                 , HA.style anchorH <| String.fromFloat offset ++ "px"
                  , Color.toCssString backgroundColor
                     |> HA.style "background-color"
                  , Color.toCssString borderColor
@@ -188,14 +164,14 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
                 )
                 hoverContent
              , triangle
-                { length = triangleLength
+                { length = tickLength
                 , borderColor = borderColor
                 , backgroundColor = backgroundColor
                 , borderWidth = borderWidth
-                , flip = placeAbove
+                , flip = anchorV == "bottom"
                 }
                 [ HA.style "position" "absolute"
-                , HA.style anchorH <| String.fromFloat (el.width / 2 - triangleLength / 2) ++ "px"
+                , HA.style anchorH <| String.fromFloat (tickLength * 2) ++ "px"
                 , HA.style anchorV "0"
                 , HA.style "z-index" "2"
                 ]

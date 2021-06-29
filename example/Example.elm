@@ -110,6 +110,7 @@ main =
                                         [ hovercard
                                             { maxWidth = 100
                                             , maxHeight = 100
+                                            , tickLength = 16
                                             , borderColor = Color.black
                                             , backgroundColor = Color.lightBlue
                                             , borderWidth = 2
