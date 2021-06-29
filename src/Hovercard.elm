@@ -118,7 +118,7 @@ hovercard { maxWidth, maxHeight, borderColor, backgroundColor, borderWidth } ele
                 -x
 
             else if el.width > toFloat maxWidth then
-                x + el.width / 2 - toFloat maxWidth / 2
+                x + el.width / 2 - triangleLength * 2
 
             else
                 0
