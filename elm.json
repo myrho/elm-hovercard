@@ -3,7 +3,7 @@
     "name": "myrho/elm-hovercard",
     "summary": "Render a hovercard beneath a DOM element",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "exposed-modules": [
         "Hovercard"
     ],

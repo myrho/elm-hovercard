@@ -69,6 +69,20 @@ main =
                         , div
                             [ style "width" "100%"
                             , style "display" "flex"
+                            , style "justify-content" "center"
+                            ]
+                            [ div
+                                [ style "width" "100%"
+                                , style "height" "50px"
+                                , style "background-color" "red"
+                                , onClick (ClickElement "long")
+                                , id "long"
+                                ]
+                                []
+                            ]
+                        , div
+                            [ style "width" "100%"
+                            , style "display" "flex"
                             , style "justify-content" "space-between"
                             ]
                             [ div
