@@ -171,7 +171,7 @@ hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borde
                 , flip = anchorV == "bottom"
                 }
                 [ HA.style "position" "absolute"
-                , HA.style anchorH <| String.fromFloat (tickLength * 2) ++ "px"
+                , HA.style anchorH "1"
                 , HA.style anchorV "0"
                 , HA.style "z-index" "2"
                 ]
