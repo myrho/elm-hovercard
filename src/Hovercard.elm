@@ -20,6 +20,7 @@ import Svg.Attributes as SA
   - maxHeight: maximum height of the hovercard
   - tickLength: length of the tick
   - borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
+  - overflow: how overflowing content should be handled (pass a CSS overflow property value as string)
 
 -}
 type alias Config =
@@ -29,6 +30,7 @@ type alias Config =
     , borderColor : Color
     , backgroundColor : Color
     , borderWidth : Float
+    , overflow : String
     }
 
 
@@ -61,7 +63,7 @@ Example:
 
 -}
 hovercard : Config -> Dom.Element -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borderWidth } element attr hoverContent =
+hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borderWidth, overflow } element attr hoverContent =
     let
         el =
             element.element
@@ -147,7 +149,7 @@ hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borde
             , HA.style anchorV "100%"
             ]
             ([ Html.div
-                ([ HA.style "overflow" "auto"
+                ([ HA.style "overflow" overflow
                  , HA.style "position" "relative"
                  , HA.style anchorV <| String.fromFloat (tickLength / 2) ++ "px"
                  , HA.style "z-index" "1"
