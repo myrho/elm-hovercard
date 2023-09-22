@@ -11,6 +11,7 @@ hovercard
     , borderColor = Color.black
     , backgroundColor = Color.lightBlue
     , borderWidth = 2
+    , overflow = "auto"
     }
     -- Browser.Dom.Element representing
     -- viewport and position of the element
@@ -31,4 +32,4 @@ hovercard
 
 ## Complete example
 
-Live on [Ellie](https://ellie-app.com/hpmQ3xZkX7Ja1)!
+Live on [Ellie](https://ellie-app.com/nYZXC9wxmpQa1)!
