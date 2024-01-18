@@ -1,56 +1,188 @@
-module Hovercard exposing (Config, hovercard)
+module Hovercard exposing
+    ( Config
+    , init
+    , update
+    , view
+    , subscriptions
+    , getElement
+    , Model, Msg
+    )
 
-{-| This module makes rendering hovercards like [Wikipedia's](https://anandchowdhary.github.io/hovercard/) easy.
+{-| This module makes rendering hovercards like [Wikipedia's](https://anandchowdhary.github.io/hovercard/) easy. It follows The Elm Architecture.
 
-@docs Config, hovercard
+
+# Configuration
+
+@docs Config
+
+
+# Init
+
+@docs init
+
+
+# Update
+
+@docs update
+
+
+# View
+
+@docs view
+
+
+# Subscriptions
+
+@docs subscriptions
+
+
+# Commands
+
+@docs getElement
+
+
+# Internals
+
+@docs Model, Msg
 
 -}
 
 import Browser.Dom as Dom
+import Browser.Events
 import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes as HA
 import Svg exposing (Svg)
 import Svg.Attributes as SA
+import Task
+import Tuple exposing (first, second)
 
 
 {-| Configure the hovercard.
 
-  - maxWidth: maximum width of the hovercard
-  - maxHeight: maximum height of the hovercard
   - tickLength: length of the tick
+  - zIndex: z-index css property of the hovercard
   - borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
-  - overflow: how overflowing content should be handled (pass a CSS overflow property value as string)
+  - viewport: override the viewport in which the hovercard can be positioned. This is needed if you render the hovercard within an HTML element with CSS attribute `position`.
 
 -}
 type alias Config =
-    { maxWidth : Int
-    , maxHeight : Int
-    , tickLength : Float
+    { tickLength : Float
+    , zIndex : Int
     , borderColor : Color
     , backgroundColor : Color
     , borderWidth : Float
-    , overflow : String
+    , viewport : Maybe { x : Float, y : Float, width : Float, height : Float }
     }
 
 
-{-| Render a hovercard above or below the given [Browser.Dom.Element](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Dom#Element).
+{-| Hovercards internal `Msg`s
+-}
+type Msg
+    = GotTargetElement (Result Dom.Error Dom.Element)
+    | GotHovercardElement (Result Dom.Error Dom.Element)
+    | WindowResized
 
-Call this function at the root of your HTML so the hovercard is positioned correctly.
+
+{-| Hovercards internal model
+-}
+type Model
+    = Model ModelInternal
+
+
+type alias ModelInternal =
+    { id : String
+    , target : Maybe Dom.Element
+    , size : Maybe ( Float, Float )
+    }
+
+
+{-| Initialize the hovercard with the ID of the target HTML element.
+
+It tries to find the target element in the DOM using [Browser.Dom.getElement](https://package.elm-lang.org/packages/elm/browser/1.0.2/Browser-Dom#getElement).
+
+-}
+init : String -> ( Model, Cmd Msg )
+init id =
+    let
+        model =
+            { id = id
+            , target = Nothing
+            , size = Nothing
+            }
+                |> Model
+    in
+    ( model
+    , getElement model
+    )
+
+
+{-| Trigger positioning of the hovercard to the target element programmatically.
+-}
+getElement : Model -> Cmd Msg
+getElement (Model { id }) =
+    Dom.getElement id
+        |> Task.attempt GotTargetElement
+
+
+postfix : String
+postfix =
+    "_hc"
+
+
+{-| Update the hovercard model
+-}
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg (Model model) =
+    case msg of
+        GotTargetElement result ->
+            result
+                |> Result.map
+                    (\element ->
+                        ( Model
+                            { model
+                                | target = Just element
+                            }
+                        , model.id
+                            ++ postfix
+                            |> Dom.getElement
+                            |> Task.attempt GotHovercardElement
+                        )
+                    )
+                |> Result.withDefault ( Model model, Cmd.none )
+
+        GotHovercardElement result ->
+            ( Model
+                { model
+                    | size =
+                        result
+                            |> Result.toMaybe
+                            |> Maybe.map (\{ element } -> ( element.width, element.height ))
+                }
+            , Cmd.none
+            )
+
+        WindowResized ->
+            ( Model model
+            , getElement (Model model)
+            )
+
+
+{-| Render the hovercard.
 
 Example:
 
-    hovercard
+    view
         -- configuration
-        { maxWidth = 100
-        , maxHeight = 100
+        { tickLength = 16
+        , zIndex = 1
         , borderColor = Color.black
         , backgroundColor = Color.lightBlue
         , borderWidth = 2
+        , viewport = Nothing
         }
-        -- Browser.Dom.Element representing
-        -- viewport and position of the element
-        element
+        -- Hovercard model
+        model
         -- additional styles for the hovercard, eg. a shadow
         [ style "box-shadow" "5px 5px 5px 0px rgba(0,0,0,0.25)"
         ]
@@ -62,124 +194,162 @@ Example:
         ]
 
 -}
-hovercard : Config -> Dom.Element -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-hovercard { maxWidth, maxHeight, tickLength, borderColor, backgroundColor, borderWidth, overflow } element attr hoverContent =
+view : Config -> Model -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+view config (Model model) attr content =
+    Maybe.map (\target -> hovercard config model.id target model attr content) model.target
+        |> Maybe.withDefault (Html.span [] [])
+
+
+hovercard : Config -> String -> Dom.Element -> ModelInternal -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
+hovercard { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIndex } id target { size } attr hoverContent =
     let
         el =
-            element.element
+            target.element
 
         vp =
-            element.viewport
+            viewport
+                |> Maybe.withDefault target.viewport
 
-        -- position of el relative to vp
-        x =
-            el.x
-                - vp.x
-                |> max 0
+        width =
+            Maybe.map first size
+                |> Maybe.withDefault 0
 
-        y =
-            el.y
-                - vp.y
-                |> max 0
+        height =
+            Maybe.map second size
+                |> Maybe.withDefault 0
 
-        w =
-            min el.width vp.width
+        leftElBound =
+            max el.x vp.x
 
-        h =
-            min el.height vp.height
+        rightElBound =
+            min (el.x + el.width) (vp.x + vp.width)
 
-        diffBelow =
-            vp.height
-                - y
-                - h
+        upperElBound =
+            max el.y vp.y
+
+        lowerElBound =
+            min (el.y + el.height) (vp.y + vp.height)
+
+        customVpX =
+            Maybe.map .x viewport |> Maybe.withDefault 0
+
+        anchorX =
+            if size == Nothing then
+                0
+
+            else
+                leftElBound
+                    + (rightElBound - leftElBound)
+                    / 2
+                    - customVpX
 
         diffAbove =
-            y
+            upperElBound - vp.y
+
+        diffBelow =
+            vp.y + vp.height - lowerElBound
+
+        placeBelow =
+            diffAbove
+                < height
+                + tickLength
+
+        customVpY =
+            Maybe.map .y viewport |> Maybe.withDefault 0
+
+        anchorY =
+            if size == Nothing then
+                0
+
+            else if placeBelow then
+                lowerElBound - customVpY
+
+            else
+                upperElBound - customVpY
+
+        rightVpBound =
+            vp.x + vp.width
+
+        halfWidth =
+            width / 2
+
+        rightCardBound =
+            anchorX + halfWidth
+
+        leftCardBound =
+            anchorX - halfWidth
+
+        diffLeft =
+            min 0 leftCardBound
 
         diffRight =
-            vp.width - x
+            rightVpBound
+                - rightCardBound
+                - customVpX
+                |> min 0
 
-        baselineBottom =
-            diffAbove
-                < toFloat maxHeight
-                && not (diffBelow < toFloat maxHeight)
+        cardX =
+            -halfWidth
+                - diffLeft
+                + diffRight
 
-        anchorH =
-            if diffRight < toFloat maxWidth then
-                "right"
-
-            else
-                "left"
-
-        ( anchorV, arrange ) =
-            if diffAbove < toFloat maxHeight then
-                ( "top", List.reverse )
+        --  |> max 0
+        cardY =
+            if placeBelow then
+                tickLength / 2
 
             else
-                ( "bottom", identity )
-
-        mw =
-            toFloat maxWidth
-                |> min vp.width
-
-        mh =
-            toFloat maxHeight
-                |> min vp.height
+                -tickLength / 2 - height
     in
     Html.div
         [ HA.style "position" "absolute"
-        , HA.style "top" <|
-            (String.fromFloat <|
-                if baselineBottom then
-                    el.y + el.height
+        , HA.style "top" <| String.fromFloat anchorY ++ "px"
+        , HA.style "left" <| String.fromFloat anchorX ++ "px"
+        , HA.style "width" "1px"
+        , HA.style "visibility" <|
+            if size == Nothing then
+                "hidden"
 
-                else
-                    el.y
-            )
-                ++ "px"
-        , HA.style "left" <| String.fromFloat el.x ++ "px"
-        , HA.style "width" <| String.fromFloat el.width ++ "px"
+            else
+                "visible"
+        , HA.style "z-index" <| String.fromInt zIndex
         ]
         [ Html.div
-            [ HA.style "position" "absolute"
-            , HA.style "max-width" <| String.fromFloat mw ++ "px"
-            , HA.style "max-height" <| String.fromFloat mh ++ "px"
-            , HA.style anchorH "0"
-            , HA.style "z-index" "100"
-            , HA.style anchorV "100%"
-            ]
-            ([ Html.div
-                ([ HA.style "overflow" overflow
-                 , HA.style "position" "relative"
-                 , HA.style anchorV <| String.fromFloat (tickLength / 2) ++ "px"
-                 , HA.style "z-index" "1"
-                 , Color.toCssString backgroundColor
-                    |> HA.style "background-color"
-                 , Color.toCssString borderColor
-                    |> HA.style "border-color"
-                 , String.fromFloat borderWidth
-                    ++ "px"
-                    |> HA.style "border-width"
-                 , HA.style "border-style" "solid"
-                 ]
-                    ++ attr
-                )
-                hoverContent
-             , triangle
-                { length = tickLength
-                , borderColor = borderColor
-                , backgroundColor = backgroundColor
-                , borderWidth = borderWidth
-                , flip = anchorV == "bottom"
-                }
-                [ HA.style "position" "absolute"
-                , HA.style anchorH "1"
-                , HA.style anchorV "0"
-                , HA.style "z-index" "2"
-                ]
+            ([ HA.style "position" "absolute"
+             , HA.style "left" <| String.fromFloat cardX ++ "px"
+             , HA.style "top" <| String.fromFloat cardY ++ "px"
+             , Color.toCssString backgroundColor
+                |> HA.style "background-color"
+             , Color.toCssString borderColor
+                |> HA.style "border-color"
+             , String.fromFloat borderWidth
+                ++ "px"
+                |> HA.style "border-width"
+             , HA.style "border-style" "solid"
+             , HA.id <| id ++ postfix
              ]
-                |> arrange
+                ++ attr
             )
+            hoverContent
+        , triangle
+            { length = tickLength
+            , borderColor = borderColor
+            , backgroundColor = backgroundColor
+            , borderWidth = borderWidth
+            , flip = not placeBelow
+            }
+            [ HA.style "position" "absolute"
+            , HA.style
+                (if placeBelow then
+                    "top"
+
+                 else
+                    "bottom"
+                )
+                "0px"
+            , HA.style "left" <| String.fromFloat (-(tickLength / 2) + borderWidth / 2) ++ "px"
+            , HA.style "z-index" "2"
+            ]
         ]
 
 
@@ -222,3 +392,15 @@ triangle { length, borderColor, backgroundColor, borderWidth, flip } attr =
             ]
             []
         ]
+
+
+{-| Subscribes to [Browser.Dom.onResize](https://package.elm-lang.org/packages/elm/browser/1.0.2/Browser-Events#onResize) in order to reposition the hovercard automatically.
+-}
+subscriptions : Model -> Sub Msg
+subscriptions (Model { size }) =
+    size
+        |> Maybe.map
+            (\_ ->
+                Browser.Events.onResize (\_ _ -> WindowResized)
+            )
+        |> Maybe.withDefault Sub.none

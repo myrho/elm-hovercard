@@ -8,14 +8,15 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Task
+import Tuple exposing (..)
 
 
 type Msg
-    = GotElement (Result Dom.Error Dom.Element)
+    = HovercardMsg Hovercard.Msg
     | ClickElement String
 
 
-main : Program () (Maybe Dom.Element) Msg
+main : Program () (Maybe Hovercard.Model) Msg
 main =
     document
         { init = \_ -> ( Nothing, Cmd.none )
@@ -106,22 +107,20 @@ main =
                     ]
                         ++ (model
                                 |> Maybe.map
-                                    (\element ->
+                                    (\mod ->
                                         [ hovercard
-                                            { maxWidth = 100
-                                            , maxHeight = 100
-                                            , tickLength = 16
+                                            { tickLength = 16
+                                            , zIndex = 1
                                             , borderColor = Color.black
                                             , backgroundColor = Color.lightBlue
                                             , borderWidth = 2
+                                            , viewport = Nothing
                                             }
-                                            -- Browser.Dom.Element representing
-                                            -- viewport and position of the element
-                                            element
+                                            mod
                                             [ style "box-shadow" "5px 5px 5px 0px rgba(0,0,0,0.25)"
                                             ]
                                             [ div
-                                                []
+                                                [ style "white-space" "nowrap" ]
                                                 [ text "Lorem ipsum dolor sit amet"
                                                 ]
                                             ]
@@ -134,13 +133,21 @@ main =
             \msg model ->
                 case msg of
                     ClickElement id ->
-                        ( model
-                        , Dom.getElement id
-                            |> Task.attempt GotElement
+                        let
+                            ( hc, cmd ) =
+                                Hovercard.init id
+                        in
+                        ( hc |> Just
+                        , cmd
+                            |> Cmd.map HovercardMsg
                         )
 
-                    GotElement result ->
-                        Result.toMaybe result
-                            |> (\m -> ( m, Cmd.none ))
-        , subscriptions = always Sub.none
+                    HovercardMsg hm ->
+                        Maybe.map (Hovercard.update hm >> mapSecond (Cmd.map HovercardMsg)) model
+                            |> Maybe.map (mapFirst Just)
+                            |> Maybe.withDefault ( Nothing, Cmd.none )
+        , subscriptions =
+            Maybe.map Hovercard.subscriptions
+                >> Maybe.map (Sub.map HovercardMsg)
+                >> Maybe.withDefault Sub.none
         }
