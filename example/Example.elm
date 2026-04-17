@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser exposing (document)
 import Browser.Dom as Dom
 import Color
-import Hovercard exposing (hovercard)
+import Hovercard exposing (Config, Model, Msg, defaultConfig, view, withBackgroundColor, withBorderColor, withBorderWidth, withZIndex, withTickLength)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -108,21 +108,20 @@ main =
                         ++ (model
                                 |> Maybe.map
                                     (\mod ->
-                                        [ hovercard
-                                            { tickLength = 16
-                                            , zIndex = 1
-                                            , borderColor = Color.black
-                                            , backgroundColor = Color.lightBlue
-                                            , borderWidth = 2
-                                            , viewport = Nothing
-                                            }
+                                        [ view
+                                            (defaultConfig
+                                                |> withTickLength 16
+                                                |> withZIndex 1
+                                                |> withBorderColor Color.black
+                                                |> withBackgroundColor Color.lightBlue
+                                                |> withBorderWidth 2
+                                            )
                                             mod
                                             [ style "box-shadow" "5px 5px 5px 0px rgba(0,0,0,0.25)"
                                             ]
                                             [ div
                                                 [ style "white-space" "nowrap" ]
-                                                [ text "Lorem ipsum dolor sit amet"
-                                                ]
+                                                [ text "Lorem ipsum dolor sit amet" ]
                                             ]
                                         ]
                                     )
