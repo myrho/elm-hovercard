@@ -1,5 +1,5 @@
 module Hovercard exposing
-    ( Config
+    ( Config, defaultConfig, withBackgroundColor, withBorderColor, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
     , init
     , update
     , view
@@ -13,7 +13,7 @@ module Hovercard exposing
 
 # Configuration
 
-@docs Config
+@docs Config, defaultConfig, withBackgroundColor, withBorderColor, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
 
 
 # Init
@@ -58,22 +58,103 @@ import Task
 import Tuple exposing (first, second)
 
 
+{-| The configuration of the Hovercard
+-}
+type Config
+    = Config ConfigInternal
+
+
 {-| Configure the hovercard.
 
   - tickLength: length of the tick
   - zIndex: z-index css property of the hovercard
   - borderColor, borderWidth, backgroundColor: minimal styling for the hovercard and the small arrow pointing to the element
   - viewport: override the viewport in which the hovercard can be positioned. This is needed if you render the hovercard within an HTML element with CSS attribute `position`.
+  - fixed: use `position: fixed` for rendering the hovercard.
 
 -}
-type alias Config =
+type alias ConfigInternal =
     { tickLength : Float
     , zIndex : Int
     , borderColor : Color
     , backgroundColor : Color
     , borderWidth : Float
     , viewport : Maybe { x : Float, y : Float, width : Float, height : Float }
+    , fixed : Bool
     }
+
+
+{-| Default configuration for the hovercard.
+
+  - tickLength: 16
+  - zIndex: 9999
+  - borderColor: Color.gray
+  - backgroundColor: Color.white
+  - borderWidth: 1
+  - viewport: Nothing
+  - fixed: False
+
+-}
+defaultConfig : Config
+defaultConfig =
+    Config
+        { tickLength = 16
+        , zIndex = 9999
+        , borderColor = Color.gray
+        , backgroundColor = Color.white
+        , borderWidth = 1
+        , viewport = Nothing
+        , fixed = False
+        }
+
+
+{-| Create a configuration with a custom tick length.
+-}
+withTickLength : Float -> Config -> Config
+withTickLength tickLength (Config config) =
+    Config { config | tickLength = tickLength }
+
+
+{-| Set the z-index of the hovercard.
+-}
+withZIndex : Int -> Config -> Config
+withZIndex zIndex (Config config) =
+    Config { config | zIndex = zIndex }
+
+
+{-| Set the border color of the hovercard.
+-}
+withBorderColor : Color -> Config -> Config
+withBorderColor borderColor (Config config) =
+    Config { config | borderColor = borderColor }
+
+
+{-| Set the background color of the hovercard.
+-}
+withBackgroundColor : Color -> Config -> Config
+withBackgroundColor backgroundColor (Config config) =
+    Config { config | backgroundColor = backgroundColor }
+
+
+{-| Set the border width of the hovercard.
+-}
+withBorderWidth : Float -> Config -> Config
+withBorderWidth borderWidth (Config config) =
+    Config { config | borderWidth = borderWidth }
+
+
+{-| Set the viewport for the hovercard positioning.
+-}
+withViewport : Maybe { x : Float, y : Float, width : Float, height : Float } -> Config -> Config
+withViewport viewport (Config config) =
+    Config { config | viewport = viewport }
+
+
+{-| Set whether the hovercard uses fixed positioning.
+-}
+withFixed : Bool -> Config -> Config
+withFixed fixed (Config config) =
+    Config { config | fixed = fixed }
 
 
 {-| Hovercards internal `Msg`s
@@ -201,7 +282,7 @@ view config (Model model) attr content =
 
 
 hovercard : Config -> String -> Dom.Element -> ModelInternal -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-hovercard { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIndex } id target { size } attr hoverContent =
+hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIndex, fixed }) id target { size } attr hoverContent =
     let
         el =
             target.element
@@ -302,7 +383,12 @@ hovercard { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIn
                 -tickLength / 2 - height
     in
     Html.div
-        [ HA.style "position" "absolute"
+        [ HA.style "position" <|
+            if fixed then
+                "fixed"
+
+            else
+                "absolute"
         , HA.style "top" <| String.fromFloat anchorY ++ "px"
         , HA.style "left" <| String.fromFloat anchorX ++ "px"
         , HA.style "width" "1px"
