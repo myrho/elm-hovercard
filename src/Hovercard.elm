@@ -1,5 +1,5 @@
 module Hovercard exposing
-    ( Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
+    ( Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, styleTickOnly, withViewport, withZIndex
     , init
     , update
     , view
@@ -13,7 +13,7 @@ module Hovercard exposing
 
 # Configuration
 
-@docs Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
+@docs Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, styleTickOnly, withViewport, withZIndex
 
 
 # Init
@@ -95,6 +95,7 @@ type alias ConfigInternal =
     , borderWidth : Float
     , viewport : Maybe { x : Float, y : Float, width : Float, height : Float }
     , fixed : Bool
+    , tickOnlyStyle : Bool
     }
 
 
@@ -107,6 +108,7 @@ type alias ConfigInternal =
   - borderWidth: 1
   - viewport: Nothing
   - fixed: False
+  - tickOnlyStyle: False
 
 -}
 defaultConfig : Config
@@ -119,6 +121,7 @@ defaultConfig =
         , borderWidth = 1
         , viewport = Nothing
         , fixed = False
+        , tickOnlyStyle = False
         }
 
 
@@ -183,6 +186,13 @@ withViewport viewport (Config config) =
 withFixed : Bool -> Config -> Config
 withFixed fixed (Config config) =
     Config { config | fixed = fixed }
+
+
+{-| Set whether only the triangle gets background and border applied.
+-}
+styleTickOnly : Bool -> Config -> Config
+styleTickOnly flag (Config config) =
+    Config { config | tickOnlyStyle = flag }
 
 
 {-| Hovercards internal `Msg`s
@@ -334,7 +344,7 @@ view config (Model model) attr content =
 
 
 hovercard : Config -> String -> Dom.Element -> ModelInternal -> List (Html.Attribute msg) -> List (Html msg) -> Html msg
-hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIndex, fixed }) id target { size } attr hoverContent =
+hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewport, zIndex, fixed, tickOnlyStyle }) id target { size } attr hoverContent =
     let
         el =
             target.element
@@ -456,16 +466,22 @@ hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewp
             ([ HA.style "position" "absolute"
              , HA.style "left" <| String.fromFloat cardX ++ "px"
              , HA.style "top" <| String.fromFloat cardY ++ "px"
-             , backgroundColorToCssString backgroundColor
-                |> HA.style "background-color"
-             , borderColorToCssString borderColor
-                |> HA.style "border-color"
-             , String.fromFloat borderWidth
-                ++ "px"
-                |> HA.style "border-width"
-             , HA.style "border-style" "solid"
-             , HA.id <| id ++ postfix
              ]
+                ++ (if tickOnlyStyle then
+                    []
+
+                   else
+                    [ backgroundColorToCssString backgroundColor
+                        |> HA.style "background-color"
+                    , borderColorToCssString borderColor
+                        |> HA.style "border-color"
+                    , String.fromFloat borderWidth
+                        ++ "px"
+                        |> HA.style "border-width"
+                    , HA.style "border-style" "solid"
+                    ]
+                   )
+                ++ [ HA.id <| id ++ postfix ]
                 ++ attr
             )
             hoverContent
