@@ -1,5 +1,5 @@
 module Hovercard exposing
-    ( Config, defaultConfig, withBackgroundColor, withBorderColor, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
+    ( Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
     , init
     , update
     , view
@@ -13,7 +13,7 @@ module Hovercard exposing
 
 # Configuration
 
-@docs Config, defaultConfig, withBackgroundColor, withBorderColor, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
+@docs Config, defaultConfig, withBackgroundColor, withBackgroundColorString, withBorderColor, withBorderColorString, withBorderWidth, withFixed, withTickLength, withViewport, withZIndex
 
 
 # Init
@@ -64,6 +64,20 @@ type Config
     = Config ConfigInternal
 
 
+{-| Internal representation of border color - can be a Color or a CSS string
+-}
+type BorderColor
+    = BorderColorType Color
+    | BorderColorString String
+
+
+{-| Internal representation of background color - can be a Color or a CSS string
+-}
+type BackgroundColor
+    = BackgroundColorType Color
+    | BackgroundColorString String
+
+
 {-| Configure the hovercard.
 
   - tickLength: length of the tick
@@ -76,8 +90,8 @@ type Config
 type alias ConfigInternal =
     { tickLength : Float
     , zIndex : Int
-    , borderColor : Color
-    , backgroundColor : Color
+    , borderColor : BorderColor
+    , backgroundColor : BackgroundColor
     , borderWidth : Float
     , viewport : Maybe { x : Float, y : Float, width : Float, height : Float }
     , fixed : Bool
@@ -100,8 +114,8 @@ defaultConfig =
     Config
         { tickLength = 16
         , zIndex = 9999
-        , borderColor = Color.gray
-        , backgroundColor = Color.white
+        , borderColor = BorderColorType Color.gray
+        , backgroundColor = BackgroundColorType Color.white
         , borderWidth = 1
         , viewport = Nothing
         , fixed = False
@@ -126,14 +140,28 @@ withZIndex zIndex (Config config) =
 -}
 withBorderColor : Color -> Config -> Config
 withBorderColor borderColor (Config config) =
-    Config { config | borderColor = borderColor }
+    Config { config | borderColor = BorderColorType borderColor }
+
+
+{-| Set the border color of the hovercard as a CSS string.
+-}
+withBorderColorString : String -> Config -> Config
+withBorderColorString borderColor (Config config) =
+    Config { config | borderColor = BorderColorString borderColor }
 
 
 {-| Set the background color of the hovercard.
 -}
 withBackgroundColor : Color -> Config -> Config
 withBackgroundColor backgroundColor (Config config) =
-    Config { config | backgroundColor = backgroundColor }
+    Config { config | backgroundColor = BackgroundColorType backgroundColor }
+
+
+{-| Set the background color of the hovercard as a CSS string.
+-}
+withBackgroundColorString : String -> Config -> Config
+withBackgroundColorString backgroundColor (Config config) =
+    Config { config | backgroundColor = BackgroundColorString backgroundColor }
 
 
 {-| Set the border width of the hovercard.
@@ -209,6 +237,30 @@ getElement (Model { id }) =
 postfix : String
 postfix =
     "_hc"
+
+
+{-| Convert BorderColor to a CSS string value
+-}
+borderColorToCssString : BorderColor -> String
+borderColorToCssString borderColor =
+    case borderColor of
+        BorderColorType color ->
+            Color.toCssString color
+
+        BorderColorString str ->
+            str
+
+
+{-| Convert BackgroundColor to a CSS string value
+-}
+backgroundColorToCssString : BackgroundColor -> String
+backgroundColorToCssString backgroundColor =
+    case backgroundColor of
+        BackgroundColorType color ->
+            Color.toCssString color
+
+        BackgroundColorString str ->
+            str
 
 
 {-| Update the hovercard model
@@ -404,9 +456,9 @@ hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewp
             ([ HA.style "position" "absolute"
              , HA.style "left" <| String.fromFloat cardX ++ "px"
              , HA.style "top" <| String.fromFloat cardY ++ "px"
-             , Color.toCssString backgroundColor
+             , backgroundColorToCssString backgroundColor
                 |> HA.style "background-color"
-             , Color.toCssString borderColor
+             , borderColorToCssString borderColor
                 |> HA.style "border-color"
              , String.fromFloat borderWidth
                 ++ "px"
@@ -439,7 +491,7 @@ hovercard (Config { tickLength, borderColor, backgroundColor, borderWidth, viewp
         ]
 
 
-triangle : { length : Float, borderColor : Color, backgroundColor : Color, borderWidth : Float, flip : Bool } -> List (Svg.Attribute msg) -> Svg msg
+triangle : { length : Float, borderColor : BorderColor, backgroundColor : BackgroundColor, borderWidth : Float, flip : Bool } -> List (Svg.Attribute msg) -> Svg msg
 triangle { length, borderColor, backgroundColor, borderWidth, flip } attr =
     let
         tl =
@@ -468,13 +520,13 @@ triangle { length, borderColor, backgroundColor, borderWidth, flip } attr =
             [ SA.d path
             , SA.strokeLinecap "round"
             , borderWidth * 1.5 |> String.fromFloat |> SA.strokeWidth
-            , Color.toCssString borderColor
+            , borderColorToCssString borderColor
                 |> SA.stroke
             ]
             []
         , Svg.path
             [ SA.d path
-            , Color.toCssString backgroundColor |> SA.fill
+            , backgroundColorToCssString backgroundColor |> SA.fill
             ]
             []
         ]
